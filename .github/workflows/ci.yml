@@ -75,7 +75,7 @@ jobs:
         if: ${{ matrix.os == 'windows-2019' && matrix.arch == 'arm64' }}
         run: |
           $NodeVersion = (node --version) -replace '^.'
-          $NodeFallbackVersion = "15.8.0"
+          $NodeFallbackVersion = "16.5.0"
           & .\script\download-node-lib-win-arm64.ps1 $NodeVersion $NodeFallbackVersion
       - name: rebuild
         if: ${{ !matrix.docker-arch }}

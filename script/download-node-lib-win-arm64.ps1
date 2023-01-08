@@ -12,8 +12,7 @@ If ($null -eq $nodeVersion -Or $null -eq $fallbackVersion) {
 $url = "https://unofficial-builds.nodejs.org/download/release/v$nodeVersion/win-arm64/node.lib"
 $fallbackUrl = "https://unofficial-builds.nodejs.org/download/release/v$fallbackVersion/win-arm64/node.lib"
 
-# Always write to the $nodeVersion cache folder, even if we're using the fallbackVersion
-$cacheFolder = "$env:TEMP\prebuild\napi\$nodeVersion\arm64"
+$cacheFolder = "C:\\Users\\runneradmin\\AppData\\Local\\node-gyp\\Cache\\$nodeVersion\\arm64"
 
 If (!(Test-Path $cacheFolder)) {
   New-Item -ItemType Directory -Force -Path $cacheFolder
