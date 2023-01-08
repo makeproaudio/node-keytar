@@ -42,23 +42,23 @@ jobs:
             arch: x64
             is-native: true
           # linux-libc
-           - os: ubuntu-latest
-             arch: arm64
-             is-native: false
-             docker-arch: linux/arm64
-             docker-image: node:16-buster
-           - os: ubuntu-latest
-             arch: arm
-             is-native: false
-             docker-arch: linux/arm/v7
-             docker-image: node:16-buster
-           # linux-musl
-           - os: ubuntu-latest
-             arch: x64
-             is-native: false
-             docker-arch: linux/amd64
-             docker-image: node:16-alpine
-             libc: musl
+          - os: ubuntu-latest
+            arch: arm64
+            is-native: false
+            docker-arch: linux/arm64
+            docker-image: node:16-buster
+          - os: ubuntu-latest
+            arch: arm
+            is-native: false
+            docker-arch: linux/arm/v7
+            docker-image: node:16-buster
+          # linux-musl
+          - os: ubuntu-latest
+            arch: x64
+            is-native: false
+            docker-arch: linux/amd64
+            docker-image: node:16-alpine
+            libc: musl
 
     steps:
       - uses: actions/checkout@v3
