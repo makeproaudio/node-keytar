@@ -103,11 +103,11 @@ jobs:
             then
               echo "deb http://deb.debian.org/debian buster-backports main contrib non-free" | tee -a /etc/apt/sources.list.d/backports.list
               apt update
-              apt install -y cmake/buster-backports yasm
+              apt install -y cmake/buster-backports yasm libsecret-1-0
             elif command -v apk &> /dev/null
             then
               apk update
-              apk add cmake make g++ gcc yasm
+              apk add cmake make g++ gcc yasm libsecret-dev
             fi
             cd /work
             yarn
