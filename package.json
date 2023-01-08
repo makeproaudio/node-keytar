@@ -46,7 +46,7 @@
     "node-gyp": "^9.3.1"
   },
   "dependencies": {
-    "pkg-prebuilds": "^0.1.0",
+    "pkg-prebuilds": "github:Julusian/pkg-prebuilds#c6782d555d035de6c25738d374207959c6719976",
     "prebuild-install": "^7.1.1"
   },
   "binary": {
