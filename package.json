@@ -1,5 +1,5 @@
 {
-  "main": "./lib/keytar.js",
+  "main": "keytar.js",
   "typings": "keytar.d.ts",
   "name": "@makepro-x/keytar",
   "description": "Bindings to native Mac/Linux/Windows password APIs",
