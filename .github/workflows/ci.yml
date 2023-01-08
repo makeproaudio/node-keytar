@@ -70,7 +70,10 @@ jobs:
       - name: cibuild
         if: ${{ matrix.os == 'ubuntu-latest' && !matrix.docker-arch }}
         shell: bash
-        run: bash script/cibuild
+        run: |
+          apt-get update
+          apt-get install -y gnome-keyring
+          bash script/cibuild
       - name: download-node-lib-win-arm64
         if: ${{ matrix.os == 'windows-2019' && matrix.arch == 'arm64' }}
         run: |
@@ -105,18 +108,17 @@ jobs:
         if: matrix.docker-arch
         with:
           image: ${{ matrix.docker-image }}
-          # shell: bash
           options: --platform=${{ matrix.docker-arch }} -v ${{ github.workspace }}:/work -e CI=1 -e npm_config_build_from_source=1 -e NAPI_VERSION -e BINDING_NAME
           run: |
             # if /etc/machine-id does not exist, create it
             if [ ! -f /etc/machine-id ]; then
-              echo $(cat /proc/sys/kernel/random/uuid) | tee /etc/machine-id
+              uuidgen | tr -d '-' > /etc/machine-id
             fi
             if command -v apt-get &> /dev/null
             then
               echo "deb http://deb.debian.org/debian buster-backports main contrib non-free" | tee -a /etc/apt/sources.list.d/backports.list
               apt update
-              apt install -y cmake/buster-backports yasm libsecret-1-dev
+              apt install -y cmake/buster-backports yasm libsecret-1-dev gnome-keyring
             elif command -v apk &> /dev/null
             then
               apk update
