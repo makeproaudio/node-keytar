@@ -1,162 +1,144 @@
-name: CI
+name: Prebuild
 
 on:
   push:
-    branches: [ master ]
-    tags:
-      - v*.*.*
-  pull_request:
-    branches: [ master ]
+    # tags:
+    #   - v*
+
+env:
+  NAPI_VERSION: 3
+  BINDING_NAME: keytar
 
 jobs:
-  build:
-    name: ${{ matrix.friendlyName }}
-    env:
-      CC: "clang"
-      CXX: "clang++"
-      npm_config_clang: "1"
-
-    strategy:
-      matrix:
-        node-version: [15.x]
-        os: [ubuntu-20.04, windows-2019, macos-latest]
-        include:
-          - os: ubuntu-20.04
-            friendlyName: Ubuntu
-          - os: windows-2019
-            friendlyName: Windows
-          - os: macos-latest
-            friendlyName: macOS
-
+  build-and-test:
+    name: Build ${{ matrix.arch }} on ${{ matrix.os }} ${{ matrix.libc }}
     runs-on: ${{ matrix.os }}
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # windows
+          - os: windows-2019
+            arch: x64
+            is-native: true
+          - os: windows-2019
+            arch: arm64
+            is-native: false
+          - os: windows-2019
+            arch: ia32
+            is-native: false
+          - os: macos-11
+            arch: arm64
+            is-native: false
+          - os: macos-11
+            arch: x64
+            is-native: true
+          # linux
+          - os: ubuntu-20.04
+            arch: x64
+            is-native: true
+          # linux-libc
+           - os: ubuntu-latest
+             arch: arm64
+             is-native: false
+             docker-arch: linux/arm64
+             docker-image: node:16-buster
+           - os: ubuntu-latest
+             arch: arm
+             is-native: false
+             docker-arch: linux/arm/v7
+             docker-image: node:16-buster
+           # linux-musl
+           - os: ubuntu-latest
+             arch: x64
+             is-native: false
+             docker-arch: linux/amd64
+             docker-image: node:16-alpine
+             libc: musl
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: |
-        sudo apt-get install gnome-keyring \
-                             libsecret-1-dev \
-                             dbus-x11 \
-                             python3-dev
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
-      name: Install additional dependencies
+      - uses: actions/checkout@v3
 
-    # This step can be removed as soon as official Windows arm64 builds are published:
-    # https://github.com/nodejs/build/issues/2450#issuecomment-705853342
-    - run: |
-        $NodeVersion = (node --version) -replace '^.'
-        $NodeFallbackVersion = "15.8.0"
-        & .\script\download-node-lib-win-arm64.ps1 $NodeVersion $NodeFallbackVersion
-      if: ${{ matrix.os == 'windows-2019' }}
-      name: Install Windows arm64 node.lib
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
 
-    - run: npm install
-      name: Setup environment
+      - name: rebuild
+        if: ${{ !matrix.docker-arch }}
+        shell: bash
+        run: |
+          yarn
+          if [ -n "${{ matrix.is-native }}" ]; then
+            yarn test
+          fi
+          yarn rebuild --arch=${{ matrix.arch }}
+          yarn pkg-prebuilds-copy --baseDir=build/Release \
+            --source=$BINDING_NAME.node \
+            --name=$BINDING_NAME \
+            --strip  \
+            --napi_version=$NAPI_VERSION \
+            --arch=${{ matrix.arch }} \
+            --extra-files=${{ matrix.extra-files }}
+        env:
+          CI: true
+          npm_config_build_from_source: true
 
-    - run: npm run build
-      name: Build native module from source
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        if: matrix.docker-arch
+      - name: rebuild (in docker)
+        uses: addnab/docker-run-action@v3
+        if: matrix.docker-arch
+        with:
+          image: ${{ matrix.docker-image }}
+          # shell: bash
+          options: --platform=${{ matrix.docker-arch }} -v ${{ github.workspace }}:/work -e CI=1 -e npm_config_build_from_source=1 -e NAPI_VERSION -e BINDING_NAME
+          run: |
+            if command -v apt-get &> /dev/null
+            then
+              echo "deb http://deb.debian.org/debian buster-backports main contrib non-free" | tee -a /etc/apt/sources.list.d/backports.list
+              apt update
+              apt install -y cmake/buster-backports yasm
+            elif command -v apk &> /dev/null
+            then
+              apk update
+              apk add cmake make g++ gcc yasm
+            fi
+            cd /work
+            yarn
+            yarn test
+            yarn pkg-prebuilds-copy --baseDir=build/Release \
+              --source=$BINDING_NAME.node \
+              --name=$BINDING_NAME \
+              --strip \
+              --napi_version=$NAPI_VERSION \
+              --arch=${{ matrix.arch }} \
+              --libc=${{ matrix.libc }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-${{ matrix.arch }}-${{ matrix.libc }}-prebuilds
+          path: prebuilds
+          retention-days: 1
 
-    - run: |
-        echo "Install keyring..."
-        pip3 install --upgrade pip
-        pip3 install keyring
-        echo "Prepare D-Bus session..."
-        eval $(dbus-launch --sh-syntax);
-        eval $(echo 'somecredstorepass' | gnome-keyring-daemon --unlock)
-        echo "Create a test key using script..."
-        python -c "import keyring;keyring.set_password('system', 'login', 'pwd');"
-        npm test
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
-      name: Run tests (Linux)
-
-    - run: npm test
-      if: ${{ matrix.os != 'ubuntu-20.04' }}
-      name: Run tests (Windows/macOS)
-
-    - run: npm run prebuild-napi-x64
-      name: Prebuild (x64)
-
-    - run: npm run prebuild-napi-arm64
-      name: Prebuild (arm64)
-      if: ${{ matrix.os != 'ubuntu-20.04' }}
-
-    - run: npm run prebuild-napi-ia32
-      if: ${{ matrix.os == 'windows-2019' }}
-      name: Prebuild (Windows x86)
-
-    - run: |
-        mkdir -p prebuilds && chmod 777 prebuilds
-        docker build -t node-keytar/i386 docker/i386
-        docker run --rm -v ${PWD}:/project node-keytar/i386 /bin/bash -c "cd /project && npm run prebuild-napi-ia32 && rm -rf build"
-        docker build -t node-keytar/arm64-cross-compile docker/arm64-cross-compile
-        docker run --rm -v ${PWD}:/project node-keytar/arm64-cross-compile /bin/bash -c "cd /project && npm run prebuild-napi-arm64 && rm -rf build"
-        docker build -t node-keytar/armv7l-cross-compile docker/armv7l-cross-compile
-        docker run --rm -v ${PWD}:/project node-keytar/armv7l-cross-compile /bin/bash -c "cd /project && npm run prebuild-napi-armv7l"
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
-      name: Prebuild (Linux x86 + ARM64 + ARMV7L)
-
-    - run: |
-        ls prebuilds/
-      name: List prebuilds
-
-    - name: Upload prebuilds to GitHub
-      run: npm run upload
-      if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-      env:
-        GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  alpine-build:
+  bundle:
+    name: Bundle prebuilds
+    needs: build-and-test
     runs-on: ubuntu-latest
-    container: node:15-alpine3.12
     steps:
-    - uses: actions/checkout@v2
-    - name: install additional dependencies
-      run: |
-        apk add g++ make python2 libsecret-dev
+      - uses: actions/download-artifact@v3
+        with:
+          path: tmp
 
-    - run: npm install
-      name: Setup environment
-
-    - run: |
-        npm run prebuild-napi-x64
-        npm run prebuild-napi-arm64
-      name: Prebuild
-
-    - run: |
-        ls prebuilds/
-      name: List prebuilds
-
-    - name: Upload prebuilds to GitHub
-      run: npm run upload
-      if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-      env:
-        GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Separate step for publishing to NPM so we're sure that generating + uploading prebuilds worked on all platforms
-  npm-publish:
-    needs: [build, alpine-build]
-    name: Publish to NPM
-    runs-on: ubuntu-20.04
-    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js 15
-      uses: actions/setup-node@v1
-      with:
-        node-version: 15.x
-        registry-url: 'https://registry.npmjs.org'
-
-    - run: sudo apt-get install libsecret-1-dev
-      name: Install additional dependencies
-
-    - run: npm install
-      name: Setup environment
-
-    - run: npm publish --access public
-      name: Upload to NPM
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      - name: Display structure of downloaded files
+        run: |
+          mkdir prebuilds
+          mv tmp/*/* prebuilds/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: all-prebuilds
+          path: prebuilds
+          retention-days: 7
