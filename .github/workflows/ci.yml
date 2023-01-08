@@ -38,7 +38,7 @@ jobs:
             arch: x64
             is-native: true
           # linux
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             arch: x64
             is-native: true
           # linux-libc
@@ -73,7 +73,10 @@ jobs:
         run: bash script/cibuild
       - name: download-node-lib-win-arm64
         if: ${{ matrix.os == 'windows-2019' && matrix.arch == 'arm64' }}
-        run: powershell script/download-node-lib-win-arm64.ps1
+        run: |
+          $NodeVersion = (node --version) -replace '^.'
+          $NodeFallbackVersion = "15.8.0"
+          & .\script\download-node-lib-win-arm64.ps1 $NodeVersion $NodeFallbackVersion
       - name: rebuild
         if: ${{ !matrix.docker-arch }}
         shell: bash
@@ -83,6 +86,7 @@ jobs:
             yarn test
           fi
           yarn rebuild --arch=${{ matrix.arch }}
+          ls -l build/Release
           yarn pkg-prebuilds-copy --baseDir=build/Release \
             --source=$BINDING_NAME.node \
             --name=$BINDING_NAME \
@@ -119,6 +123,7 @@ jobs:
               apk add cmake make g++ gcc yasm libsecret-dev
             fi
             cd /work
+            script/cibuild
             yarn
             yarn test
             yarn pkg-prebuilds-copy --baseDir=build/Release \
