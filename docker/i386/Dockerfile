@@ -9,7 +9,7 @@ RUN apt-get install --quiet --yes \
     python \
     libsecret-1-dev
 
-RUN curl -sL https://deb.nodesource.com/setup_9.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
 RUN apt-get install -y nodejs
 
 ENV CC clang

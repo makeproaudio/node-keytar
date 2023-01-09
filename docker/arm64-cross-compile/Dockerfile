@@ -25,5 +25,5 @@ ENV AS=/usr/bin/aarch64-linux-gnu-as \
   FC=/usr/bin/aarch64-linux-gnu-gfortran \
   PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
 
-RUN curl -sL https://deb.nodesource.com/setup_15.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
 RUN apt-get install -y nodejs
