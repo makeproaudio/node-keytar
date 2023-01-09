@@ -71,8 +71,8 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' && !matrix.docker-arch }}
         shell: bash
         run: |
-          apt-get update
-          apt-get install -y gnome-keyring
+          sudo apt-get update
+          sudo apt-get install -y gnome-keyring
           bash script/cibuild
       - name: download-node-lib-win-arm64
         if: ${{ matrix.os == 'windows-2019' && matrix.arch == 'arm64' }}
@@ -108,7 +108,7 @@ jobs:
         if: matrix.docker-arch
         with:
           image: ${{ matrix.docker-image }}
-          options: --platform=${{ matrix.docker-arch }} -v ${{ github.workspace }}:/work -e CI=1 -e npm_config_build_from_source=1 -e NAPI_VERSION -e BINDING_NAME
+          options: --cap-add ipc_lock --platform=${{ matrix.docker-arch }} -v ${{ github.workspace }}:/work -e CI=1 -e npm_config_build_from_source=1 -e NAPI_VERSION -e BINDING_NAME
           run: |
             # if /etc/machine-id does not exist, create it
             if [ ! -f /etc/machine-id ]; then
