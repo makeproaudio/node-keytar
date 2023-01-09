@@ -22,10 +22,11 @@
     "credential vault"
   ],
   "files": [
-    "lib",
     "src",
     "binding.gyp",
-    "keytar.d.ts"
+    "keytar.d.ts",
+    "keytar.js",
+    "prebuilds"
   ],
   "types": "./keytar.d.ts",
   "scripts": {
