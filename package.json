@@ -26,7 +26,8 @@
     "binding.gyp",
     "keytar.d.ts",
     "keytar.js",
-    "prebuilds"
+    "prebuilds",
+    "binding-options.js"
   ],
   "types": "./keytar.d.ts",
   "scripts": {
