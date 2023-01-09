@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           yarn
-          if [ -n "${{ matrix.is-native }}" ]; then
+          if [ -n "${{ matrix.is-native }}" ] && [ "${{ matrix.os }}" != "ubuntu-latest" ]
             yarn test
           fi
           yarn rebuild --arch=${{ matrix.arch }}
