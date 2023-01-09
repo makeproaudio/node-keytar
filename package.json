@@ -31,7 +31,7 @@
   ],
   "types": "./keytar.d.ts",
   "scripts": {
-    "install": "prebuild-install || npm run build",
+    "install": "pkg-prebuilds-verify ./binding-options.js || npm run build",
     "build": "node-gyp rebuild",
     "rebuild": "node-gyp clean configure build",
     "lint": "npm run cpplint",
@@ -48,8 +48,7 @@
     "node-gyp": "^9.3.1"
   },
   "dependencies": {
-    "pkg-prebuilds": "github:Julusian/pkg-prebuilds#c6782d555d035de6c25738d374207959c6719976",
-    "prebuild-install": "^7.1.1"
+    "pkg-prebuilds": "github:Julusian/pkg-prebuilds#c6782d555d035de6c25738d374207959c6719976"
   },
   "binary": {
     "napi_versions": [
